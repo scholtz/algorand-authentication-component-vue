@@ -39,4 +39,6 @@ Use in template
 
 ## DEMO
 
-Demo Project: https://www.npmjs.com/package/algorand-authentication-demo
+Demo Project: https://www.github.com/scholtz/algorand-authentication-demo
+
+Live demo: https://algorand-authentication-demo.vercel.app/

@@ -1,14 +1,17 @@
 {
   "name": "algorand-authentication-component-vue",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "files": [
     "dist"
   ],
+  "main": "./dist/algorand-authentication-component-vue.umd.js",
   "module": "./dist/algorand-authentication-component-vue.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/algorand-authentication-component-vue.es.js"
+      "import": "./dist/algorand-authentication-component-vue.es.js",
+      "require": "./dist/algorand-authentication-component-vue.umd.js",
+      "types": "./dist/index.d.ts"
     },
     "./dist/style.css": "./dist/style.css"
   },
@@ -17,7 +20,7 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-step-1": "vite build",
-    "build-step-2": "vue-tsc --declaration --emitDeclarationOnly",
+    "build-step-2": "vue-tsc --emitDeclarationOnly",
     "build-step-3": "npm publish",
     "type-check": "vue-tsc --noEmit -p tsconfig.app.json --composite false",
     "types": "vue-tsc --declaration --emitDeclarationOnly",

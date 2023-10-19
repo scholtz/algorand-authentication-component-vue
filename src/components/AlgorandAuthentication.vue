@@ -7,7 +7,7 @@ import Message from 'primevue/message'
 import { defineComponent } from 'vue'
 
 export interface INotification {
-  severity: string
+  severity: 'error' | 'success' | 'info' | 'warn' | undefined
   message: string
 }
 export default defineComponent({

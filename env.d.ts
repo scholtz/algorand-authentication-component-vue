@@ -1,12 +1,17 @@
 /// <reference types="vite/client" />
-declare const __APP_VERSION__: string
-declare const IAlgorandAuthenticationStore: {
+
+declare module 'algorand-authentication-component-vue'
+
+export interface INotification {
+  severity: string
+  message: string
+}
+
+export interface IAlgorandAuthenticationStore {
   isAuthenticated: boolean
   arc14Header: string
   wallet: string
+  account: string
   count: number
+  arc76email: string
 }
-
-declare const AlgorandAuthentication: {}
-
-declare module 'algorand-authentication-component-vue'

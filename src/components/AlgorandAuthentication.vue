@@ -37,11 +37,6 @@ import getAlgodClient from '../scripts/getAlgodClient'
 import arc14 from '../scripts/arc14'
 import { AlgorandAuthenticationStore } from '../store/AlgorandAuthenticationStore'
 import algosdk from 'algosdk'
-// const AlgorandAuthenticationStore = reactive({
-//   isAuthenticated: false,
-//   arc14Header: '',
-//   count: 0
-// })
 
 const props = defineProps({
   wallets: { type: Array<String>, required: true },
@@ -125,8 +120,8 @@ async function connect(walletId: string) {
     AlgorandAuthenticationStore.count++
     AlgorandAuthenticationStore.arc14Header = header
     AlgorandAuthenticationStore.isAuthenticated = true
-  } catch (e: Error) {
-    handleOnNotification({ severity: 'error', message: e.message })
+  } catch (e: any) {
+    handleOnNotification({ severity: 'error', message: e?.message })
   }
   forceRender()
   handleOnStateChange()
@@ -155,8 +150,8 @@ async function sign(txs: Uint8Array[]): Promise<Uint8Array[]> {
     const ret = await wallet?.signTransactions(txs)
     if (!ret) return []
     return ret
-  } catch (e: Error) {
-    handleOnNotification({ severity: 'error', message: e.message })
+  } catch (e: any) {
+    handleOnNotification({ severity: 'error', message: e?.message })
     return []
   }
 }
@@ -225,8 +220,8 @@ async function signWithArc76(txs: Uint8Array[]): Promise<Uint8Array[]> {
     state.inSignature = false
     state.inRegistrationToSign = false
     return ret
-  } catch (e: Error) {
-    handleOnNotification({ severity: 'error', message: e.message })
+  } catch (e: any) {
+    handleOnNotification({ severity: 'error', message: e?.message })
     return []
   }
 }
@@ -303,8 +298,8 @@ async function authArc76Auth() {
     AlgorandAuthenticationStore.arc76email = state.email
     state.password = ''
     state.password2 = ''
-  } catch (e: Error) {
-    handleOnNotification({ severity: 'error', message: e.message })
+  } catch (e: any) {
+    handleOnNotification({ severity: 'error', message: e?.message })
   }
   forceRender()
   handleOnStateChange()
@@ -464,7 +459,7 @@ function signInFormError() {
 <style>
 .wallets-page {
   background-size: cover;
-  background-image: url('/auth-cover.jpg');
+  /*background-image: url('/auth-cover.jpg');*/
   background-repeat: no-repeat;
   background-attachment: fixed;
   background-position: center;

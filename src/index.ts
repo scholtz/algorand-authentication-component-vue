@@ -1,5 +1,3 @@
-import './assets/main.css'
-
 import AlgorandAuthentication from './components/AlgorandAuthentication.vue'
 export { AlgorandAuthentication }
 

@@ -33,14 +33,14 @@ import { Buffer } from 'buffer'
 //   network: NetworkId.TESTNET
 // })
 import { AnyWalletState } from '@thencc/any-wallet'
-import getAlgodClient from '../scripts/getAlgodClient'
 import arc14 from '../scripts/arc14'
 import { AlgorandAuthenticationStore } from '../store/AlgorandAuthenticationStore'
 import algosdk from 'algosdk'
 
 const props = defineProps({
   wallets: { type: Array<String>, required: true },
-  useDemoMnemonics: { type: String, required: false, default: '' }
+  useDemoMnemonics: { type: String, required: false, default: '' },
+  algodClient: { type: algosdk.Algodv2, required: true }
 })
 
 const awState = new AnyWalletState()
@@ -108,7 +108,7 @@ async function connect(walletId: string) {
     }
     const accounts = (await wallet.connect()) as Account[]
     console.log('after connect', accounts)
-    const client = getAlgodClient()
+    const client = props.algodClient
     const params = await client.getTransactionParams().do()
     AlgorandAuthenticationStore.account = accounts[0].address
     const arc14Tx = arc14('Auth', AlgorandAuthenticationStore.account, params)
@@ -201,7 +201,7 @@ async function signWithArc76(txs: Uint8Array[]): Promise<Uint8Array[]> {
       cryptoKey,
       256
     )
-    console.log('masterBits', masterBits)
+    //console.log('masterBits', masterBits)
     const uint8 = new Uint8Array(masterBits)
     const mnemonic = algosdk.mnemonicFromSeed(uint8)
     const genAccount = algosdk.mnemonicToSecretKey(mnemonic)
@@ -282,8 +282,7 @@ async function authArc76Auth() {
     const mnemonic = algosdk.mnemonicFromSeed(uint8)
     const genAccount = algosdk.mnemonicToSecretKey(mnemonic)
 
-    const client = getAlgodClient()
-    const params = await client.getTransactionParams().do()
+    const params = await props.algodClient.getTransactionParams().do()
     const arc14Tx = arc14('Auth', genAccount.addr, params)
 
     const signed = arc14Tx.signTxn(genAccount.sk)

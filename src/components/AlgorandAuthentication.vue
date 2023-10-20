@@ -40,8 +40,12 @@ import algosdk from 'algosdk'
 const props = defineProps({
   wallets: { type: Array<String>, required: true },
   useDemoMnemonics: { type: String, required: false, default: '' },
-  algodClient: { type: algosdk.Algodv2, required: true }
+  algodHost: { type: String, required: true },
+  algodToken: { type: String, required: false },
+  algodPort: { type: Number, required: true }
 })
+
+const client = new algosdk.Algodv2(props.algodToken ?? '', props.algodHost, props.algodPort)
 
 const awState = new AnyWalletState()
 console.log('awState', awState)
@@ -108,7 +112,6 @@ async function connect(walletId: string) {
     }
     const accounts = (await wallet.connect()) as Account[]
     console.log('after connect', accounts)
-    const client = props.algodClient
     const params = await client.getTransactionParams().do()
     AlgorandAuthenticationStore.account = accounts[0].address
     const arc14Tx = arc14('Auth', AlgorandAuthenticationStore.account, params)
@@ -282,7 +285,7 @@ async function authArc76Auth() {
     const mnemonic = algosdk.mnemonicFromSeed(uint8)
     const genAccount = algosdk.mnemonicToSecretKey(mnemonic)
 
-    const params = await props.algodClient.getTransactionParams().do()
+    const params = await client.getTransactionParams().do()
     const arc14Tx = arc14('Auth', genAccount.addr, params)
 
     const signed = arc14Tx.signTxn(genAccount.sk)

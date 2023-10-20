@@ -300,6 +300,7 @@ async function authArc76Auth() {
     AlgorandAuthenticationStore.arc76email = state.email
     state.password = ''
     state.password2 = ''
+    state.inRegistration= false
   } catch (e: any) {
     handleOnNotification({ severity: 'error', message: e?.message })
   }

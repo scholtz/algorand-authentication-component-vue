@@ -17,19 +17,25 @@ export default defineConfig({
       external: [
         'vue',
         '@thencc/any-wallet',
+        '@thencc/inkey-types',
         '@blockshake/defly-connect',
         '@perawallet/connect',
         '@randlabs/myalgo-connect',
         '@walletconnect/modal',
         '@walletconnect/sign-client',
         '@walletconnect/types',
-        'algosdk'
+        'algosdk',
+        'buffer',
+        'primevue'
       ],
       output: {
         globals: {
+          buffer: 'buffer',
+          primevue: 'primevue',
           vue: 'Vue',
           algosdk: 'algosdk',
-          '@thencc/any-wallet': '@thencc/any-wallet'
+          '@thencc/any-wallet': '@thencc/any-wallet',
+          '@thencc/inkey-types': '@thencc/inkey-types'
         }
       }
     }

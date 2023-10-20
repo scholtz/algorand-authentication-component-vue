@@ -1,6 +1,6 @@
 {
   "name": "algorand-authentication-component-vue",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "files": [
     "dist"
   ],
@@ -41,6 +41,7 @@
     "vue": "^3.3.4"
   },
   "devDependencies": {
+    "@babel/types": "^7.23.0",
     "@rushstack/eslint-patch": "^1.5.1",
     "@tsconfig/node18": "^18.2.2",
     "@types/node": "^18.18.5",

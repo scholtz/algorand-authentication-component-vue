@@ -1,6 +1,6 @@
 {
   "name": "algorand-authentication-component-vue",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "files": [
     "dist"
   ],
@@ -29,13 +29,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "@blockshake/defly-connect": "^1.1.6",
-    "@perawallet/connect": "^1.3.3",
-    "@randlabs/myalgo-connect": "^1.4.2",
     "@thencc/any-wallet": "^0.2.10",
-    "@walletconnect/modal": "^2.6.2",
-    "@walletconnect/sign-client": "^2.10.2",
-    "@walletconnect/types": "^2.10.2",
     "algosdk": "^2.4.0",
     "buffer": "^6.0.3",
     "primevue": "^3.36.0",

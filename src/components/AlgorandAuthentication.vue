@@ -38,6 +38,8 @@ authStore.count = props.store.count
 authStore.isAuthenticated = props.store.isAuthenticated
 authStore.wallet = props.store.wallet
 authStore.anyWallet = props.store.anyWallet ?? new AnyWalletState()
+console.log('authStore.anyWallet', authStore.anyWallet)
+console.log('getWalletById', getWalletById('mnemonic'))
 
 const client = new algosdk.Algodv2(props.algodToken ?? '', props.algodHost, props.algodPort)
 
@@ -420,18 +422,18 @@ function signInFormError() {
       <div class="wallet-options">
         <h3>Or use external wallet service</h3>
         <div
-          v-for="walletId in authStore.anyWallet?.allWallets"
-          :key="walletId.toString()"
+          v-for="wallet in authStore.anyWallet?.allWallets"
+          :key="wallet.id"
           :class="componentKey"
           class="wallet-option"
-          :title="getWalletById(walletId.toString())?.metadata.name"
+          :title="getWalletById(wallet.id)?.metadata.name"
         >
-          <div :onclick="async () => await connect(walletId.toString())">
-            <span class="wallet-name">{{ getWalletById(walletId.toString())?.metadata.name }}</span>
+          <div :onclick="async () => await connect(wallet.id)">
+            <span class="wallet-name">{{ getWalletById(wallet.id)?.metadata.name }}</span>
             <img
               class="wallet-icon"
-              :src="getWalletById(walletId.toString())?.metadata.icon"
-              :alt="getWalletById(walletId.toString())?.metadata.name"
+              :src="getWalletById(wallet.id)?.metadata.icon"
+              :alt="getWalletById(wallet.id)?.metadata.name"
               height="30"
             />
           </div>

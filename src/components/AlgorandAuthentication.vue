@@ -18,20 +18,7 @@ export default defineComponent({
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { Buffer } from 'buffer'
-// import { NetworkId, WALLET_ID, WalletManager } from '@txnlab/use-wallet-js'
-// const walletManager = new WalletManager({
-//   wallets: [
-//     WALLET_ID.DEFLY,
-//     WALLET_ID.EXODUS,
-//     WALLET_ID.MYALGO,
-//     WALLET_ID.PERA
-//     // {
-//     //   id: WALLET_ID.WALLETCONNECT,
-//     //   options: { projectId: '<YOUR_PROJECT_ID>' }
-//     // }
-//   ],
-//   network: NetworkId.TESTNET
-// })
+
 import { AnyWalletState } from '@thencc/any-wallet'
 import arc14 from '../scripts/arc14'
 import { AlgorandAuthenticationStore } from '../store/AlgorandAuthenticationStore'
@@ -42,13 +29,13 @@ const props = defineProps({
   useDemoMnemonics: { type: String, required: false, default: '' },
   algodHost: { type: String, required: true },
   algodToken: { type: String, required: false },
-  algodPort: { type: Number, required: true }
+  algodPort: { type: Number, required: true },
+  anyWallet: { type: AnyWalletState, required: true }
 })
 
 const client = new algosdk.Algodv2(props.algodToken ?? '', props.algodHost, props.algodPort)
 
-const awState = new AnyWalletState()
-console.log('awState', awState)
+console.log('awState', props.anyWallet)
 const isAuthenticated = ref(false)
 console.log('isAuthenticated', isAuthenticated)
 
@@ -108,7 +95,7 @@ async function connect(walletId: string) {
     if (AlgorandAuthenticationStore.wallet == 'mnemonic') {
       console.log('state.m', state.m)
       if (!state.m) return
-      awState.initWallet('mnemonic', state.m)
+      props.anyWallet.initWallet('mnemonic', state.m)
     }
     const accounts = (await wallet.connect()) as Account[]
     console.log('after connect', accounts)
@@ -146,7 +133,7 @@ async function sign(txs: Uint8Array[]): Promise<Uint8Array[]> {
     }
 
     AlgorandAuthenticationStore.count++
-    const wallet = Object.values(awState.allWallets).find(
+    const wallet = Object.values(props.anyWallet.allWallets).find(
       (w) => w.id == AlgorandAuthenticationStore.wallet
     )
     handleOnStateChange()
@@ -251,7 +238,7 @@ function testM() {
 }
 
 function getWalletById(walletId: string) {
-  const find = Object.values(awState.allWallets).find((w) => w.id == walletId)
+  const find = Object.values(props.anyWallet.allWallets).find((w) => w.id == walletId)
   return find
 }
 
@@ -300,7 +287,7 @@ async function authArc76Auth() {
     AlgorandAuthenticationStore.arc76email = state.email
     state.password = ''
     state.password2 = ''
-    state.inRegistration= false
+    state.inRegistration = false
   } catch (e: any) {
     handleOnNotification({ severity: 'error', message: e?.message })
   }

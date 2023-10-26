@@ -1,6 +1,6 @@
 {
   "name": "algorand-authentication-component-vue",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "files": [
     "dist"
   ],

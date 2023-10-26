@@ -1,8 +1,7 @@
 import AlgorandAuthentication from './components/AlgorandAuthentication.vue'
-export { AlgorandAuthentication }
 
-import type { IAlgorandAuthenticationStore } from './store/AlgorandAuthenticationStore'
-export type { IAlgorandAuthenticationStore }
+import type { IAuthenticationStore, IState, Account, INotification } from './types'
+export type { IAuthenticationStore, IState, Account, INotification }
+import { AuthenticationStore } from './types'
 
-import type { INotification } from './components/AlgorandAuthentication.vue'
-export type { INotification }
+export { AlgorandAuthentication, AuthenticationStore }

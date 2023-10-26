@@ -5,11 +5,11 @@ import Password from 'primevue/password'
 import Message from 'primevue/message'
 
 import { defineComponent } from 'vue'
+import { IState, Account, INotification } from '../types'
+import { AuthenticationStore } from '../types'
+import { AnyWalletState, W_ID } from '@thencc/any-wallet'
+import { authStore } from '../store/authStore'
 
-export interface INotification {
-  severity: 'error' | 'success' | 'info' | 'warn' | undefined
-  message: string
-}
 export default defineComponent({
   name: 'AlgorandAuthentication'
 })
@@ -19,9 +19,7 @@ export default defineComponent({
 import { reactive, ref } from 'vue'
 import { Buffer } from 'buffer'
 
-import { AnyWalletState } from '@thencc/any-wallet'
 import arc14 from '../scripts/arc14'
-import { AlgorandAuthenticationStore } from '../store/AlgorandAuthenticationStore'
 import algosdk from 'algosdk'
 
 const props = defineProps({
@@ -30,31 +28,25 @@ const props = defineProps({
   algodHost: { type: String, required: true },
   algodToken: { type: String, required: false },
   algodPort: { type: Number, required: true },
-  anyWallet: { type: AnyWalletState, required: true }
+  store: { type: AuthenticationStore, required: true }
 })
+
+authStore.account = props.store.account
+authStore.arc14Header = props.store.arc14Header
+authStore.arc76email = props.store.arc76email
+authStore.count = props.store.count
+authStore.isAuthenticated = props.store.isAuthenticated
+authStore.wallet = props.store.wallet
+authStore.anyWallet = props.store.anyWallet ?? new AnyWalletState()
 
 const client = new algosdk.Algodv2(props.algodToken ?? '', props.algodHost, props.algodPort)
 
-console.log('awState', props.anyWallet)
+console.log('awState', authStore.anyWallet)
 const isAuthenticated = ref(false)
 console.log('isAuthenticated', isAuthenticated)
 
-interface IState {
-  m: string
-  email: string
-  password: string
-  password2: string
-  name: string
-  emailIsValid: boolean
-  inRegistration: boolean
-  inRegistrationToSign: boolean
-  usignedTxs: Array<algosdk.Transaction>
-  inSignature: boolean
-}
-
 const state = reactive<IState>({
   m: '',
-  email: '',
   password: '',
   password2: '',
   name: '',
@@ -72,15 +64,6 @@ const componentKey = ref(0)
 const forceRender = () => {
   componentKey.value += 1
 }
-interface Account {
-  walletId: string
-  name: string
-  address: string
-  chain: string
-  active: boolean
-  dateConnected: number
-  dateLastActive?: number
-}
 
 async function connect(walletId: string) {
   try {
@@ -89,27 +72,28 @@ async function connect(walletId: string) {
       console.error(`Wallet ${walletId} not found`)
       return
     }
+    if (!authStore.anyWallet) return
     console.log('before connect')
-    AlgorandAuthenticationStore.wallet = wallet.id
-    console.log('AlgorandAuthenticationStore.wallet', AlgorandAuthenticationStore.wallet)
-    if (AlgorandAuthenticationStore.wallet == 'mnemonic') {
+    authStore.wallet = wallet.id
+    console.log('store.wallet', authStore.wallet)
+    if (authStore.wallet == 'mnemonic') {
       console.log('state.m', state.m)
       if (!state.m) return
-      props.anyWallet.initWallet('mnemonic', state.m)
+      authStore.anyWallet.initWallet('mnemonic', state.m)
     }
     const accounts = (await wallet.connect()) as Account[]
     console.log('after connect', accounts)
     const params = await client.getTransactionParams().do()
-    AlgorandAuthenticationStore.account = accounts[0].address
-    const arc14Tx = arc14('Auth', AlgorandAuthenticationStore.account, params)
+    authStore.account = accounts[0].address
+    const arc14Tx = arc14('Auth', authStore.account, params)
 
     const signed = await wallet.signTransactions([arc14Tx.toByte()])
     console.log('signed', signed)
     const header = `SigTx ${Buffer.from(signed[0]).toString('base64')}`
     console.log('header', header)
-    AlgorandAuthenticationStore.count++
-    AlgorandAuthenticationStore.arc14Header = header
-    AlgorandAuthenticationStore.isAuthenticated = true
+    authStore.count++
+    authStore.arc14Header = header
+    authStore.isAuthenticated = true
   } catch (e: any) {
     handleOnNotification({ severity: 'error', message: e?.message })
   }
@@ -120,21 +104,22 @@ async function connect(walletId: string) {
 const emit = defineEmits(['onStateChange', 'onNotification'])
 
 const handleOnStateChange = () => {
-  emit('onStateChange', AlgorandAuthenticationStore)
+  emit('onStateChange', authStore)
 }
 const handleOnNotification = (msg: INotification) => {
   emit('onNotification', msg)
 }
 async function sign(txs: Uint8Array[]): Promise<Uint8Array[]> {
   try {
-    console.log('to sign', AlgorandAuthenticationStore.wallet)
-    if (AlgorandAuthenticationStore.wallet == 'arc76') {
+    if (!authStore.anyWallet) return []
+    console.log('to sign', authStore.wallet)
+    if (authStore.wallet == 'arc76') {
       return await signWithArc76(txs)
     }
 
-    AlgorandAuthenticationStore.count++
-    const wallet = Object.values(props.anyWallet.allWallets).find(
-      (w) => w.id == AlgorandAuthenticationStore.wallet
+    authStore.count++
+    const wallet = Object.values(authStore.anyWallet.allWallets).find(
+      (w) => w.id == authStore.wallet
     )
     handleOnStateChange()
     const ret = await wallet?.signTransactions(txs)
@@ -156,7 +141,7 @@ function authArc76CancelSign() {
 }
 async function signWithArc76(txs: Uint8Array[]): Promise<Uint8Array[]> {
   try {
-    console.log('to sign signWithArc76', AlgorandAuthenticationStore.wallet)
+    console.log('to sign signWithArc76', authStore.wallet)
     state.inSignature = true
     state.inRegistrationToSign = false
     console.log('txs', txs)
@@ -171,8 +156,8 @@ async function signWithArc76(txs: Uint8Array[]): Promise<Uint8Array[]> {
       return []
     }
 
-    const init = `ARC-0076-${state.email}-${state.password}-0-PBKDF2-999999`
-    const salt = `ARC-0076-${state.email}-0-PBKDF2-999999`
+    const init = `ARC-0076-${authStore.arc76email}-${state.password}-0-PBKDF2-999999`
+    const salt = `ARC-0076-${authStore.arc76email}-0-PBKDF2-999999`
     const iterations = 999999
     const cryptoKey = await window.crypto.subtle.importKey(
       'raw',
@@ -196,10 +181,8 @@ async function signWithArc76(txs: Uint8Array[]): Promise<Uint8Array[]> {
     const mnemonic = algosdk.mnemonicFromSeed(uint8)
     const genAccount = algosdk.mnemonicToSecretKey(mnemonic)
 
-    if (genAccount.addr != AlgorandAuthenticationStore.account) {
-      console.error(
-        `Password is invalid ${genAccount.addr} != ${AlgorandAuthenticationStore.account}`
-      )
+    if (genAccount.addr != authStore.account) {
+      console.error(`Password is invalid ${genAccount.addr} != ${authStore.account}`)
 
       handleOnNotification({ severity: 'error', message: 'Password is invalid' })
       return await signWithArc76(txs)
@@ -217,15 +200,14 @@ async function signWithArc76(txs: Uint8Array[]): Promise<Uint8Array[]> {
 }
 
 function logout() {
-  AlgorandAuthenticationStore.count++
-  AlgorandAuthenticationStore.arc14Header = ''
-  AlgorandAuthenticationStore.isAuthenticated = false
-  AlgorandAuthenticationStore.account = ''
-  AlgorandAuthenticationStore.wallet = ''
-  AlgorandAuthenticationStore.arc76email = ''
+  authStore.count++
+  authStore.arc14Header = ''
+  authStore.isAuthenticated = false
+  authStore.account = ''
+  authStore.wallet = ''
+  authStore.arc76email = ''
   state.m = ''
-  state.email = ''
-  return AlgorandAuthenticationStore
+  return authStore
 }
 defineExpose({
   sign,
@@ -237,9 +219,19 @@ function testM() {
   console.log('state.m', state.m)
 }
 
-function getWalletById(walletId: string) {
-  const find = Object.values(props.anyWallet.allWallets).find((w) => w.id == walletId)
-  return find
+interface IWallet {
+  id: W_ID
+  metadata: {
+    name: string
+    icon: string
+  }
+  connect: (p?: any) => Promise<Account[]>
+  signTransactions: (transactions: Uint8Array[]) => Promise<Uint8Array[]>
+}
+function getWalletById(walletId: string): IWallet | null {
+  if (!authStore.anyWallet) return null
+  const find = Object.values(authStore.anyWallet.allWallets).find((w) => w.id == walletId)
+  return find as IWallet
 }
 
 async function authArc76Auth() {
@@ -247,8 +239,8 @@ async function authArc76Auth() {
     if (!window || !window.crypto || !window.crypto.subtle) {
       throw Error('Crypto API in browser is not available')
     }
-    const init = `ARC-0076-${state.email}-${state.password}-0-PBKDF2-999999`
-    const salt = `ARC-0076-${state.email}-0-PBKDF2-999999`
+    const init = `ARC-0076-${authStore.arc76email}-${state.password}-0-PBKDF2-999999`
+    const salt = `ARC-0076-${authStore.arc76email}-0-PBKDF2-999999`
     const iterations = 999999
     const cryptoKey = await window.crypto.subtle.importKey(
       'raw',
@@ -279,12 +271,11 @@ async function authArc76Auth() {
     console.log('signed', signed)
     const header = `SigTx ${Buffer.from(signed).toString('base64')}`
     console.log('header', header)
-    AlgorandAuthenticationStore.count++
-    AlgorandAuthenticationStore.account = genAccount.addr
-    AlgorandAuthenticationStore.wallet = 'arc76'
-    AlgorandAuthenticationStore.arc14Header = header
-    AlgorandAuthenticationStore.isAuthenticated = true
-    AlgorandAuthenticationStore.arc76email = state.email
+    authStore.count++
+    authStore.account = genAccount.addr
+    authStore.wallet = 'arc76'
+    authStore.arc14Header = header
+    authStore.isAuthenticated = true
     state.password = ''
     state.password2 = ''
     state.inRegistration = false
@@ -297,7 +288,7 @@ async function authArc76Auth() {
 
 function checkEmailValidity() {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  state.emailIsValid = emailRegex.test(state.email)
+  state.emailIsValid = emailRegex.test(authStore.arc76email)
 }
 
 function signInFormError() {
@@ -339,10 +330,13 @@ function signInFormError() {
       </div>
     </div>
   </div>
-  <slot v-else-if="AlgorandAuthenticationStore.isAuthenticated"></slot>
-  <div v-else class="wallets-page grid align-items-center w-auto flex-grow-1 p-0 m-0">
+  <slot v-else-if="authStore.isAuthenticated"></slot>
+  <div
+    v-else-if="authStore.anyWallet"
+    class="wallets-page grid align-items-center w-auto flex-grow-1 p-0 m-0"
+  >
     <div class="col-12 md:col-6 xl:col-3 xl:col-offset-3">
-      <div v-if="AlgorandAuthenticationStore.wallet == 'mnemonic'" class="wallet-settings">
+      <div v-if="authStore.wallet == 'mnemonic'" class="wallet-settings">
         <h3>Only for development purposes</h3>
         <label for="m">Mnemonics input</label>
         <div>
@@ -368,7 +362,7 @@ function signInFormError() {
           <Input
             id="e"
             type="email"
-            v-model="state.email"
+            v-model="authStore.arc76email"
             class="m-1 w-full"
             placeholder="Please write your email"
           />
@@ -426,7 +420,7 @@ function signInFormError() {
       <div class="wallet-options">
         <h3>Or use external wallet service</h3>
         <div
-          v-for="walletId in props.wallets"
+          v-for="walletId in authStore.anyWallet?.allWallets"
           :key="walletId.toString()"
           :class="componentKey"
           class="wallet-option"

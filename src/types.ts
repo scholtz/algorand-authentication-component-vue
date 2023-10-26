@@ -4,6 +4,7 @@ import algosdk from 'algosdk'
 import { AnyWalletState } from '@thencc/any-wallet'
 
 interface IAuthenticationStore {
+  inAuthentication: boolean
   isAuthenticated: boolean
   arc14Header: string
   wallet: string
@@ -38,6 +39,7 @@ interface INotification {
   message: string
 }
 class AuthenticationStore {
+  inAuthentication: boolean
   isAuthenticated: boolean
   arc14Header: string
   wallet: string
@@ -46,6 +48,7 @@ class AuthenticationStore {
   arc76email: string
   anyWallet: AnyWalletState | null
   constructor() {
+    this.inAuthentication = false
     this.isAuthenticated = false
     this.arc14Header = ''
     this.count = 0

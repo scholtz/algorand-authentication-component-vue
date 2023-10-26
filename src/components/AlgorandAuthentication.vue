@@ -96,6 +96,7 @@ async function connect(walletId: string) {
     authStore.count++
     authStore.arc14Header = header
     authStore.isAuthenticated = true
+    authStore.inAuthentication = false
   } catch (e: any) {
     handleOnNotification({ severity: 'error', message: e?.message })
   }
@@ -213,12 +214,15 @@ function logout() {
 }
 defineExpose({
   sign,
-  logout
+  logout,
+  auth
 })
-
+function auth() {
+  authStore.inAuthentication = true
+  handleOnStateChange()
+}
 function testM() {
   state.m = props.useDemoMnemonics
-  console.log('state.m', state.m)
 }
 
 interface IWallet {
@@ -281,6 +285,7 @@ async function authArc76Auth() {
     state.password = ''
     state.password2 = ''
     state.inRegistration = false
+    authStore.inAuthentication = false
   } catch (e: any) {
     handleOnNotification({ severity: 'error', message: e?.message })
   }
@@ -309,7 +314,7 @@ function signInFormError() {
     v-if="state.inSignature"
     class="wallets-page grid align-items-center w-auto flex-grow-1 p-0 m-0"
   >
-    <div class="col-12 md:col-6 xl:col-3 xl:col-offset-3">
+    <div class="col-12 md:col-6 xl:col-4 xl:col-offset-2">
       <div class="wallet-settings">
         <h3>Sign {{ state.usignedTxs.length }} transactions</h3>
         <label for="p">Password</label>
@@ -332,12 +337,12 @@ function signInFormError() {
       </div>
     </div>
   </div>
-  <slot v-else-if="authStore.isAuthenticated"></slot>
+
   <div
-    v-else-if="authStore.anyWallet"
+    v-else-if="authStore.inAuthentication && authStore.anyWallet"
     class="wallets-page grid align-items-center w-auto flex-grow-1 p-0 m-0"
   >
-    <div class="col-12 md:col-6 xl:col-3 xl:col-offset-3">
+    <div class="col-12 md:col-6 xl:col-4 xl:col-offset-2">
       <div v-if="authStore.wallet == 'mnemonic'" class="wallet-settings">
         <h3>Only for development purposes</h3>
         <label for="m">Mnemonics input</label>
@@ -355,6 +360,7 @@ function signInFormError() {
         <div>
           <Button @click="async () => await connect('mnemonic')" class="m-1">Connect</Button>
           <Button @click="testM" class="m-1" v-if="props.useDemoMnemonics"> Demo </Button>
+          <Button @click="authStore.wallet = 'arc76'" class="m-1">Go back</Button>
         </div>
       </div>
       <div v-else class="wallet-settings">
@@ -415,10 +421,11 @@ function signInFormError() {
           <Button @click="state.inRegistration = true" class="m-1" severity="secondary">
             New registration
           </Button>
+          <Button @click="authStore.inAuthentication = false" class="m-1">Go back</Button>
         </div>
       </div>
     </div>
-    <div class="col-12 md:col-6 xl:col-3" v-if="!state.inRegistration">
+    <div class="col-12 md:col-6 xl:col-4" v-if="!state.inRegistration">
       <div class="wallet-options">
         <h3>Or use external wallet service</h3>
         <div
@@ -428,7 +435,10 @@ function signInFormError() {
           class="wallet-option"
           :title="getWalletById(wallet.id)?.metadata.name"
         >
-          <div :onclick="async () => await connect(wallet.id)">
+          <div
+            :onclick="async () => await connect(wallet.id)"
+            v-if="wallets.indexOf(wallet.id) >= 0"
+          >
             <span class="wallet-name">{{ getWalletById(wallet.id)?.metadata.name }}</span>
             <img
               class="wallet-icon"
@@ -441,6 +451,7 @@ function signInFormError() {
       </div>
     </div>
   </div>
+  <slot v-else></slot>
 </template>
 <style>
 .wallets-page {

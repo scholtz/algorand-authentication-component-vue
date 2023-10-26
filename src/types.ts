@@ -2,7 +2,6 @@
 
 import algosdk from 'algosdk'
 import { AnyWalletState } from '@thencc/any-wallet'
-type W_ID = 'pera' | 'inkey' | 'myalgo' | 'algosigner' | 'exodus' | 'defly' | 'mnemonic'
 
 interface IAuthenticationStore {
   isAuthenticated: boolean

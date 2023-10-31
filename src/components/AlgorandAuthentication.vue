@@ -217,7 +217,16 @@ defineExpose({
   logout,
   auth
 })
-function auth() {
+/**
+ * Show auth screen.
+ *
+ * This method is exposed, so users can call it
+ * @param email Optional parameter is email
+ */
+function auth(email: string | undefined) {
+  if (email) {
+    authStore.arc76email = email
+  }
   authStore.inAuthentication = true
   handleOnStateChange()
 }

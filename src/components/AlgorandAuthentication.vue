@@ -25,6 +25,7 @@ import algosdk from 'algosdk'
 const props = defineProps({
   wallets: { type: Array<String>, required: true },
   useDemoMnemonics: { type: String, required: false, default: '' },
+  arc14Realm: { type: String, required: true },
   algodHost: { type: String, required: true },
   algodToken: { type: String, required: false },
   algodPort: { type: Number, required: true },
@@ -87,7 +88,7 @@ async function connect(walletId: string) {
     console.log('after connect', accounts)
     const params = await client.getTransactionParams().do()
     authStore.account = accounts[0].address
-    const arc14Tx = arc14('Auth', authStore.account, params)
+    const arc14Tx = arc14(props.arc14Realm, authStore.account, params)
 
     const signed = await wallet.signTransactions([arc14Tx.toByte()])
     console.log('signed', signed)
@@ -280,7 +281,7 @@ async function authArc76Auth() {
     const genAccount = algosdk.mnemonicToSecretKey(mnemonic)
 
     const params = await client.getTransactionParams().do()
-    const arc14Tx = arc14('Auth', genAccount.addr, params)
+    const arc14Tx = arc14(props.arc14Realm, genAccount.addr, params)
 
     const signed = arc14Tx.signTxn(genAccount.sk)
     console.log('signed', signed)

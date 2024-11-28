@@ -320,6 +320,11 @@ function signInFormError() {
 </script>
 
 <template>
+  <slot
+    :style="
+      state.inSignature || (authStore.inAuthentication && authStore.anyWallet) ? 'display:none' : ''
+    "
+  ></slot>
   <div
     v-if="state.inSignature"
     class="wallets-page grid align-items-center w-auto flex-grow-1 p-0 m-0"
@@ -461,7 +466,6 @@ function signInFormError() {
       </div>
     </div>
   </div>
-  <slot v-else></slot>
 </template>
 <style>
 .wallets-page {

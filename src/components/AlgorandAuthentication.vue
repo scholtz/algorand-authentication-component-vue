@@ -29,7 +29,8 @@ const props = defineProps({
   algodHost: { type: String, required: true },
   algodToken: { type: String, required: false },
   algodPort: { type: Number, required: true },
-  store: { type: AuthenticationStore, required: true }
+  store: { type: AuthenticationStore, required: true },
+  class: { type: String, required: false }
 })
 
 authStore.account = props.store.account
@@ -320,11 +321,18 @@ function signInFormError() {
 </script>
 
 <template>
-  <slot
+  <div
     :style="
       state.inSignature || (authStore.inAuthentication && authStore.anyWallet) ? 'display:none' : ''
     "
-  ></slot>
+    :class="
+      state.inSignature || (authStore.inAuthentication && authStore.anyWallet)
+        ? 'hidden ' + props.class
+        : props.class
+    "
+  >
+    <slot></slot>
+  </div>
   <div
     v-if="state.inSignature"
     class="wallets-page grid align-items-center w-auto flex-grow-1 p-0 m-0"

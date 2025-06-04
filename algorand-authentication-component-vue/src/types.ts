@@ -1,7 +1,6 @@
 /// <reference types="vite/client" />
 
 import algosdk from 'algosdk'
-import { AnyWalletState } from '@thencc/any-wallet'
 
 interface IAuthenticationStore {
   inAuthentication: boolean
@@ -11,7 +10,6 @@ interface IAuthenticationStore {
   account: string
   count: number
   arc76email: string
-  anyWallet: AnyWalletState | null
 }
 
 interface IState {
@@ -46,7 +44,6 @@ class AuthenticationStore {
   account: string
   count: number
   arc76email: string
-  anyWallet: AnyWalletState | null
   constructor() {
     this.inAuthentication = false
     this.isAuthenticated = false
@@ -55,7 +52,6 @@ class AuthenticationStore {
     this.wallet = ''
     this.account = ''
     this.arc76email = ''
-    this.anyWallet = new AnyWalletState()
   }
 }
 export { AuthenticationStore }

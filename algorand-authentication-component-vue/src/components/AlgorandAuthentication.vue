@@ -1,26 +1,19 @@
-<script lang="ts">
+<script setup lang="ts">
 import Button from 'primevue/button'
-import Input from 'primevue/inputtext'
+//import Input from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Message from 'primevue/message'
 
-import { defineComponent } from 'vue'
-import { IState, Account, INotification } from '../types'
+import { IState, INotification } from '../types'
 import { AuthenticationStore } from '../types'
-import { AnyWalletState, W_ID } from '@thencc/any-wallet'
 import { authStore } from '../store/authStore'
 
-export default defineComponent({
-  name: 'AlgorandAuthentication'
-})
-</script>
-
-<script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { Buffer } from 'buffer'
 
 import arc14 from '../scripts/arc14'
 import algosdk from 'algosdk'
+import { useWallet } from '@txnlab/use-wallet-vue'
 
 const props = defineProps({
   wallets: { type: Array<String>, required: true },
@@ -39,16 +32,10 @@ authStore.arc76email = props.store.arc76email
 authStore.count = props.store.count
 authStore.isAuthenticated = props.store.isAuthenticated
 authStore.wallet = props.store.wallet
-authStore.anyWallet = props.store.anyWallet ?? new AnyWalletState()
-console.log('authStore.anyWallet', authStore.anyWallet)
-console.log('getWalletById', getWalletById('mnemonic'))
 
 const client = new algosdk.Algodv2(props.algodToken ?? '', props.algodHost, props.algodPort)
 
-console.log('awState', authStore.anyWallet)
-const isAuthenticated = ref(false)
-console.log('isAuthenticated', isAuthenticated)
-
+const { activeAccount, transactionSigner, wallets, activeWallet } = useWallet()
 const state = reactive<IState>({
   m: '',
   password: '',
@@ -61,14 +48,11 @@ const state = reactive<IState>({
   inSignature: false
 })
 
-//const connected = await init.connect()
-//console.log('connected', connected)
-
 const componentKey = ref(0)
 const forceRender = () => {
   componentKey.value += 1
 }
-
+/*
 async function connect(walletId: string) {
   try {
     const wallet = getWalletById(walletId)
@@ -76,14 +60,12 @@ async function connect(walletId: string) {
       console.error(`Wallet ${walletId} not found`)
       return
     }
-    if (!authStore.anyWallet) return
     console.log('before connect')
     authStore.wallet = wallet.id
     console.log('store.wallet', authStore.wallet)
     if (authStore.wallet == 'mnemonic') {
       console.log('state.m', state.m)
       if (!state.m) return
-      authStore.anyWallet.initWallet('mnemonic', state.m)
     }
     const accounts = (await wallet.connect()) as Account[]
     console.log('after connect', accounts)
@@ -104,7 +86,7 @@ async function connect(walletId: string) {
   }
   forceRender()
   handleOnStateChange()
-}
+}*/
 
 const emit = defineEmits(['onStateChange', 'onNotification'])
 
@@ -116,18 +98,25 @@ const handleOnNotification = (msg: INotification) => {
 }
 async function sign(txs: Uint8Array[]): Promise<Uint8Array[]> {
   try {
-    if (!authStore.anyWallet) return []
     console.log('to sign', authStore.wallet)
     if (authStore.wallet == 'arc76') {
       return await signWithArc76(txs)
     }
 
     authStore.count++
-    const wallet = Object.values(authStore.anyWallet.allWallets).find(
-      (w) => w.id == authStore.wallet
-    )
+
     handleOnStateChange()
-    const ret = await wallet?.signTransactions(txs)
+    const indexes: number[] = []
+    for (let index = 0; index < txs.length; index++) {
+      const decoded = algosdk.decodeUnsignedTransaction(txs[index])
+      if (decoded.sender.toString() == activeAccount.value?.address.toString()) {
+        indexes.push(index)
+      }
+    }
+    const ret = await transactionSigner(
+      txs.map((tx) => algosdk.decodeUnsignedTransaction(tx)),
+      indexes
+    )
     if (!ret) return []
     return ret
   } catch (e: any) {
@@ -172,12 +161,7 @@ async function signWithArc76(txs: Uint8Array[]): Promise<Uint8Array[]> {
       ['deriveBits', 'deriveKey']
     )
     const masterBits = await window.crypto.subtle.deriveBits(
-      {
-        name: 'PBKDF2',
-        hash: 'SHA-256',
-        salt: Buffer.from(salt, 'utf-8'),
-        iterations: iterations
-      },
+      { name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.from(salt, 'utf-8'), iterations: iterations },
       cryptoKey,
       256
     )
@@ -186,7 +170,7 @@ async function signWithArc76(txs: Uint8Array[]): Promise<Uint8Array[]> {
     const mnemonic = algosdk.mnemonicFromSeed(uint8)
     const genAccount = algosdk.mnemonicToSecretKey(mnemonic)
 
-    if (genAccount.addr != authStore.account) {
+    if (genAccount.addr.toString() != authStore.account.toString()) {
       console.error(`Password is invalid ${genAccount.addr} != ${authStore.account}`)
 
       handleOnNotification({ severity: 'error', message: 'Password is invalid' })
@@ -214,11 +198,7 @@ function logout() {
   state.m = ''
   return authStore
 }
-defineExpose({
-  sign,
-  logout,
-  auth
-})
+defineExpose({ sign, logout, auth })
 /**
  * Show auth screen.
  *
@@ -234,21 +214,6 @@ function auth(email: string | undefined) {
 }
 function testM() {
   state.m = props.useDemoMnemonics
-}
-
-interface IWallet {
-  id: W_ID
-  metadata: {
-    name: string
-    icon: string
-  }
-  connect: (p?: any) => Promise<Account[]>
-  signTransactions: (transactions: Uint8Array[]) => Promise<Uint8Array[]>
-}
-function getWalletById(walletId: string): IWallet | null {
-  if (!authStore.anyWallet) return null
-  const find = Object.values(authStore.anyWallet.allWallets).find((w) => w.id == walletId)
-  return find as IWallet
 }
 
 async function authArc76Auth() {
@@ -267,12 +232,7 @@ async function authArc76Auth() {
       ['deriveBits', 'deriveKey']
     )
     const masterBits = await window.crypto.subtle.deriveBits(
-      {
-        name: 'PBKDF2',
-        hash: 'SHA-256',
-        salt: Buffer.from(salt, 'utf-8'),
-        iterations: iterations
-      },
+      { name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.from(salt, 'utf-8'), iterations: iterations },
       cryptoKey,
       256
     )
@@ -282,14 +242,14 @@ async function authArc76Auth() {
     const genAccount = algosdk.mnemonicToSecretKey(mnemonic)
 
     const params = await client.getTransactionParams().do()
-    const arc14Tx = arc14(props.arc14Realm, genAccount.addr, params)
+    const arc14Tx = arc14(props.arc14Realm, genAccount.addr.toString(), params)
 
     const signed = arc14Tx.signTxn(genAccount.sk)
     console.log('signed', signed)
     const header = `SigTx ${Buffer.from(signed).toString('base64')}`
     console.log('header', header)
     authStore.count++
-    authStore.account = genAccount.addr
+    authStore.account = genAccount.addr.toString()
     authStore.wallet = 'arc76'
     authStore.arc14Header = header
     authStore.isAuthenticated = true
@@ -322,22 +282,13 @@ function signInFormError() {
 
 <template>
   <div
-    :style="
-      state.inSignature || (authStore.inAuthentication && authStore.anyWallet) ? 'display:none' : ''
-    "
-    :class="
-      state.inSignature || (authStore.inAuthentication && authStore.anyWallet)
-        ? 'hidden ' + props.class
-        : props.class
-    "
+    :style="state.inSignature || authStore.inAuthentication ? 'display:none' : ''"
+    :class="state.inSignature || authStore.inAuthentication ? 'hidden ' + props.class : props.class"
   >
     <slot></slot>
   </div>
-  <div
-    v-if="state.inSignature"
-    class="wallets-page grid align-items-center w-auto flex-grow-1 p-0 m-0"
-  >
-    <div class="col-12 md:col-6 xl:col-4 xl:col-offset-2">
+  <div v-if="state.inSignature" class="wallets-page grid items-center w-auto flex-grow p-0 m-0">
+    <div class="col-span-12 md:col-span-6 xl:col-span-4 xl:col-start-3">
       <div class="wallet-settings">
         <h3>Sign {{ state.usignedTxs.length }} transactions</h3>
         <label for="p">Password</label>
@@ -347,7 +298,7 @@ function signInFormError() {
             placeholder="Please write your password"
             id="p"
             v-model="state.password"
-            class="m-1 w-full"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
             toggleMask
             inputClass="w-full"
             :feedback="false"
@@ -361,11 +312,8 @@ function signInFormError() {
     </div>
   </div>
 
-  <div
-    v-else-if="authStore.inAuthentication && authStore.anyWallet"
-    class="wallets-page grid align-items-center w-auto flex-grow-1 p-0 m-0"
-  >
-    <div class="col-12 md:col-6 xl:col-4 xl:col-offset-2">
+  <div v-else-if="authStore.inAuthentication" class="flex min-h-screen w-full wallets-page">
+    <div class="w-1/2 items-center justify-center flex p-12 shadow-lg bg-white/50">
       <div v-if="authStore.wallet == 'mnemonic'" class="wallet-settings">
         <h3>Only for development purposes</h3>
         <label for="m">Mnemonics input</label>
@@ -374,62 +322,69 @@ function signInFormError() {
             type="password"
             id="m"
             v-model="state.m"
-            class="m-1 w-full"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
             inputClass="w-full"
             toggleMask
             :feedback="false"
           />
         </div>
         <div>
-          <Button @click="async () => await connect('mnemonic')" class="m-1">Connect</Button>
           <Button @click="testM" class="m-1" v-if="props.useDemoMnemonics"> Demo </Button>
           <Button @click="authStore.wallet = 'arc76'" class="m-1">Go back</Button>
         </div>
       </div>
-      <div v-else class="wallet-settings">
-        <h3>Sign in</h3>
-        <label for="e" class="m-1">Email</label>
+      <div v-else class="w-full max-w-sm space-y-6">
+        <h3 class="text-2xl font-bold text-gray-800">Sign in</h3>
         <div>
-          <Input
+          <label for="e" class="block text-sm font-medium text-gray-700">Email</label>
+
+          <input
             id="e"
             type="email"
             v-model="authStore.arc76email"
-            class="m-1 w-full"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            style="padding: 4px"
             placeholder="Please write your email"
           />
         </div>
-        <label for="p" class="m-1">Password</label>
         <div>
-          <Password
+          <label for="p" class="block text-sm font-medium text-gray-700">Password</label>
+          <input
+            style="padding: 4px"
             type="password"
             placeholder="Please write your password"
             id="p"
             v-model="state.password"
-            class="m-1 w-full"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
             toggleMask
-            inputClass="w-full"
+            inputClass="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
             :feedback="false"
           />
         </div>
         <div v-if="state.inRegistration">
           <label for="p2" class="m-1">Repeat password</label>
           <div>
-            <Input
+            <input
+              style="padding: 4px"
               type="password"
               id="p2"
               placeholder="Please repeat your password"
               v-model="state.password2"
-              class="m-1 w-full"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
               toggleMask
-              inputClass="w-full"
+              inputClass="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <Message severity="error" v-if="state.password && signInFormError()" class="m-3">{{
             signInFormError()
           }}</Message>
-          <Button :disabled="!!signInFormError()" @click="authArc76Auth" class="m-1">
+          <button
+            :disabled="!!signInFormError()"
+            @click="authArc76Auth"
+            class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+          >
             Continue
-          </Button>
+          </button>
           <Button @click="state.inRegistration = false" class="m-1" severity="secondary">
             Back to sign in
           </Button>
@@ -438,36 +393,58 @@ function signInFormError() {
           <Message severity="error" v-if="state.password && signInFormError()" class="my-3 mx-1">{{
             signInFormError()
           }}</Message>
-          <Button :disabled="!!signInFormError()" @click="authArc76Auth" class="m-1">
+          <button
+            :disabled="!!signInFormError()"
+            @click="authArc76Auth"
+            class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+          >
             Continue
-          </Button>
-          <Button @click="state.inRegistration = true" class="m-1" severity="secondary">
-            New registration
-          </Button>
-          <Button @click="authStore.inAuthentication = false" class="m-1">Go back</Button>
+          </button>
+          <div class="grid grid-cols-2 gap-4 w-full">
+            <button
+              @click="state.inRegistration = true"
+              class="m-2 py-2 rounded-md"
+              severity="secondary"
+            >
+              Register
+            </button>
+            <button @click="authStore.inAuthentication = false" class="m-1">Go back</button>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-12 md:col-6 xl:col-4" v-if="!state.inRegistration">
+    <div v-if="!state.inRegistration" class="w-1/2 flex flex-col p-12 shadow-lg bg-gray-500/50">
       <div class="wallet-options">
-        <h3>Or use external wallet service</h3>
+        <h3>Or connect with wallet</h3>
+        <div v-if="activeAccount">
+          <button @click="activeWallet?.disconnect()">
+            Disconnect from {{ activeWallet?.metadata.name }}
+          </button>
+        </div>
         <div
-          v-for="wallet in authStore.anyWallet?.allWallets"
+          v-else
+          v-for="wallet in wallets"
           :key="wallet.id"
           :class="componentKey"
           class="wallet-option"
-          :title="getWalletById(wallet.id)?.metadata.name"
+          :title="wallet.metadata.name"
         >
           <div
-            :onclick="async () => await connect(wallet.id)"
-            v-if="wallets.indexOf(wallet.id) >= 0"
+            v-if="wallet && !wallet.isActive && wallet.isConnected"
+            @click="wallet.setActive()"
+            :disabled="!wallet.isConnected || wallet.isActive"
           >
-            <span class="wallet-name">{{ getWalletById(wallet.id)?.metadata.name }}</span>
+            <span class="wallet-name">{{ wallet.metadata.name }}</span>
+            <img class="wallet-icon h-8" :src="wallet.metadata.icon" :alt="wallet.metadata.name" />
+          </div>
+          <div v-else @click="wallet.connect()">
+            <span class="wallet-name">{{ wallet.metadata.name }}</span>
             <img
-              class="wallet-icon"
-              :src="getWalletById(wallet.id)?.metadata.icon"
-              :alt="getWalletById(wallet.id)?.metadata.name"
-              height="30"
+              class="wallet-icon h-8"
+              :src="wallet.metadata.icon"
+              :alt="wallet.metadata.name"
+              width="50"
+              height="50"
             />
           </div>
         </div>
@@ -476,33 +453,7 @@ function signInFormError() {
   </div>
 </template>
 <style>
-.wallets-page {
-  background-size: cover;
-  /*background-image: url('/auth-cover.jpg');*/
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  background-position: center;
-}
-.wallet-options,
-.wallet-settings {
-  box-shadow: #ffe7c6 0px 48px 100px 0px;
-  border-radius: 20px;
-  padding: 10px;
-  background-color: rgba(255, 255, 255, 0.9);
-}
-.wallet-option {
-  vertical-align: middle;
-  margin: 10px 1px;
-  display: flex;
-  border-radius: 5pt;
-  cursor: pointer;
-}
-.wallet-name {
-  min-width: 10em;
-  display: inline-block;
-  padding: 1pt 2pt 1pt 4pt;
-}
-.wallet-icon {
-  vertical-align: middle;
+.a {
+  background-color: #f0f0f0;
 }
 </style>

@@ -16,7 +16,7 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'vue',
-        '@thencc/any-wallet',
+        '@txnlab/use-wallet-vue',
         '@thencc/inkey-types',
         '@blockshake/defly-connect',
         '@perawallet/connect',
@@ -34,7 +34,7 @@ export default defineConfig({
           primevue: 'primevue',
           vue: 'Vue',
           algosdk: 'algosdk',
-          '@thencc/any-wallet': '@thencc/any-wallet',
+          '@txnlab/use-wallet-vue': '@txnlab/use-wallet-vue',
           '@thencc/inkey-types': '@thencc/inkey-types'
         }
       }

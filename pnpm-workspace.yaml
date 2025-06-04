@@ -1,0 +1,3 @@
+packages:
+  - 'algorand-authentication-component-vue'
+  - 'algorand-authentication-demo'

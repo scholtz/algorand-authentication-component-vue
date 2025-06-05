@@ -8,7 +8,6 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    Password: typeof import('primevue/password')['default']
     Toast: typeof import('primevue/toast')['default']
   }
 }

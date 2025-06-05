@@ -1,6 +1,16 @@
 /// <reference types="vite/client" />
+export type Deferred<T> = {
+  promise: Promise<T>
+  resolve: (value: T) => void
+}
 
-import algosdk from 'algosdk'
+export function createDeferred<T>(): Deferred<T> {
+  let resolve: (value: T) => void
+  const promise = new Promise<T>((res) => {
+    resolve = res
+  })
+  return { promise, resolve: resolve! }
+}
 
 interface IAuthenticationStore {
   inAuthentication: boolean
@@ -10,9 +20,6 @@ interface IAuthenticationStore {
   account: string
   count: number
   arc76email: string
-}
-
-interface IState {
   m: string
   password: string
   password2: string
@@ -20,9 +27,12 @@ interface IState {
   emailIsValid: boolean
   inRegistration: boolean
   inRegistrationToSign: boolean
-  usignedTxs: Array<algosdk.Transaction>
-  inSignature: boolean
+  usignedTxs: Uint8Array[]
+  inArc76Signature: boolean
+  inWalletSignature: boolean
+  signaturePromise: null | Deferred<Uint8Array[]>
 }
+
 interface Account {
   walletId: string
   name: string
@@ -36,23 +46,4 @@ interface INotification {
   severity: 'error' | 'success' | 'info' | 'warn' | undefined
   message: string
 }
-class AuthenticationStore {
-  inAuthentication: boolean
-  isAuthenticated: boolean
-  arc14Header: string
-  wallet: string
-  account: string
-  count: number
-  arc76email: string
-  constructor() {
-    this.inAuthentication = false
-    this.isAuthenticated = false
-    this.arc14Header = ''
-    this.count = 0
-    this.wallet = ''
-    this.account = ''
-    this.arc76email = ''
-  }
-}
-export { AuthenticationStore }
-export type { IAuthenticationStore, IState, Account, INotification }
+export type { IAuthenticationStore, Account, INotification }

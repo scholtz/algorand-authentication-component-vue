@@ -1,0 +1,60 @@
+{
+  "name": "algorand-authentication-component-vue",
+  "version": "2.0.0",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/algorand-authentication-component-vue.umd.js",
+  "module": "./dist/algorand-authentication-component-vue.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/algorand-authentication-component-vue.es.js",
+      "require": "./dist/algorand-authentication-component-vue.umd.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./dist/style.css": "./dist/style.css",
+    "./dist/algorand-authentication-component-vue.css": "./dist/algorand-authentication-component-vue.css"
+  },
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "run-p type-check \"build-only {@}\" --",
+    "preview": "vite preview",
+    "build-only": "vite build",
+    "build-step-1": "vite build",
+    "build-step-2": "vue-tsc  --declaration --emitDeclarationOnly",
+    "build-step-3": "npm publish",
+    "type-check": "vue-tsc --noEmit -p tsconfig.json --composite false",
+    "types": "vue-tsc --declaration --emitDeclarationOnly",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "@txnlab/use-wallet-vue": "^4.1.0",
+    "algosdk": "^3.3.1",
+    "buffer": "^6.0.3",
+    "primevue": "^4.3.5",
+    "vue": "^3.3.4"
+  },
+  "devDependencies": {
+    "@babel/types": "^7.27.3",
+    "@rushstack/eslint-patch": "^1.11.0",
+    "@tsconfig/node22": "^22.0.1",
+    "@types/node": "^22.14.1",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.5.0",
+    "@vue/tsconfig": "^0.4.0",
+    "eslint": "^9.25.0",
+    "eslint-plugin-vue": "~10.0.0",
+    "npm-run-all2": "^6.2.6",
+    "sass": "^1.89.1",
+    "tailwindcss": "^4.1.8",
+    "tailwindcss-primeui": "^0.6.1",
+    "@tailwindcss/vite": "^4.1.8",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.2",
+    "vue-tsc": "^2.2.8"
+  }
+}

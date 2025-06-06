@@ -1,21 +1,18 @@
 {
   "compilerOptions": {
-    "target": "ES6",
+    "target": "es2020",
     "useDefineForClassFields": true,
-    "module": "ES6",
-    "lib": ["ES6", "DOM", "DOM.Iterable"],
+    "module": "es6",
+    "lib": ["es2020", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
-    /* Bundler mode */
+
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    // "noEmit": true,
-    // "jsx": "preserve",
 
     "outDir": "dist",
     "declaration": true,
 
-    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

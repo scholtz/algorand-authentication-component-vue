@@ -1,0 +1,18 @@
+{
+  "name": "algorand-authentication",
+  "folders": [
+    {
+      "path": "algorand-authentication-component-vue",
+      "name": "package"
+    },
+    {
+      "path": "algorand-authentication-demo",
+      "name": "demo"
+    },
+    {
+      "path": ".",
+      "name": "ROOT"
+    }
+  ],
+  "settings": {}
+}

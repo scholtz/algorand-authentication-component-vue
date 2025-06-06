@@ -3,8 +3,8 @@ import { Buffer } from 'buffer'
 
 const arc14 = (realm: string, signerAddr: string, params: algosdk.SuggestedParams) => {
   const arc14Tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: signerAddr,
-    to: signerAddr,
+    sender: signerAddr,
+    receiver: signerAddr,
     amount: 0,
     note: new Uint8Array(Buffer.from(realm + '#ARC14')),
     suggestedParams: { ...params, fee: 0, flatFee: true }

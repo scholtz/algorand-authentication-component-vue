@@ -32,8 +32,16 @@ const sign = async (
     authStore.signaturePromise = createDeferred<Uint8Array[]>()
     return await authStore.signaturePromise.promise
   } else {
-    authStore.inWalletSignature = true
-    return await transactionSigner(txnGroup, indexesToSign)
+    try {
+      authStore.inWalletSignature = true
+      const ret = await transactionSigner(txnGroup, indexesToSign)
+      authStore.inWalletSignature = false
+      return ret
+    } catch (error) {
+      authStore.inWalletSignature = false
+      console.error('Error during transaction signing:', error)
+      throw error
+    }
   }
 }
 export const useAVMAuthentication = (): {

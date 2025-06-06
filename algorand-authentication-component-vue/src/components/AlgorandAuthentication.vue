@@ -6,112 +6,56 @@ import Message from 'primevue/message'
 import { INotification } from '../types'
 import { authStore } from '../store/authStore'
 
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Buffer } from 'buffer'
 
 import arc14 from '../scripts/arc14'
 import algosdk from 'algosdk'
-import { useWallet } from '@txnlab/use-wallet-vue'
+import { useNetwork, useWallet } from '@txnlab/use-wallet-vue'
 
 const props = defineProps({
-  wallets: { type: Array<String>, required: true },
   useDemoMnemonics: { type: String, required: false, default: '' },
   arc14Realm: { type: String, required: true },
-  algodHost: { type: String, required: true },
-  algodToken: { type: String, required: false },
-  algodPort: { type: Number, required: true },
   class: { type: String, required: false },
   authorizedOnlyAccess: { type: Boolean, required: false, default: false }
 })
 
-const client = new algosdk.Algodv2(props.algodToken ?? '', props.algodHost, props.algodPort)
+const { activeAccount, wallets, activeWallet, transactionSigner } = useWallet()
+const { activeNetworkConfig } = useNetwork()
 
-const { activeAccount, wallets, activeWallet } = useWallet()
+let client = new algosdk.Algodv2(
+  activeNetworkConfig.value.algod.token,
+  activeNetworkConfig.value.algod.baseServer,
+  activeNetworkConfig.value.algod.port,
+  activeNetworkConfig.value.algod.headers
+)
+watch(
+  () => activeNetworkConfig,
+  () => {
+    client = new algosdk.Algodv2(
+      activeNetworkConfig.value.algod.token,
+      activeNetworkConfig.value.algod.baseServer,
+      activeNetworkConfig.value.algod.port,
+      activeNetworkConfig.value.algod.headers
+    )
+    console.debug('activeNetworkConfig updated')
+  }
+)
 
 const componentKey = ref(0)
 const forceRender = () => {
   componentKey.value += 1
 }
-/*
-async function connect(walletId: string) {
-  try {
-    const wallet = getWalletById(walletId)
-    if (!wallet) {
-      console.error(`Wallet ${walletId} not found`)
-      return
-    }
-    console.log('before connect')
-    authStore.wallet = wallet.id
-    console.log('store.wallet', authStore.wallet)
-    if (authStore.wallet == 'mnemonic') {
-      console.log('authStore.m', authStore.m)
-      if (!authStore.m) return
-    }
-    const accounts = (await wallet.connect()) as Account[]
-    console.log('after connect', accounts)
-    const params = await client.getTransactionParams().do()
-    authStore.account = accounts[0].address
-    const arc14Tx = arc14(props.arc14Realm, authStore.account, params)
 
-    const signed = await wallet.signTransactions([arc14Tx.toByte()])
-    console.log('signed', signed)
-    const header = `SigTx ${Buffer.from(signed[0]).toString('base64')}`
-    console.log('header', header)
-    authStore.count++
-    authStore.arc14Header = header
-    authStore.isAuthenticated = true
-    authStore.inAuthentication = false
-  } catch (e: any) {
-    handleOnNotification({ severity: 'error', message: e?.message })
-  }
-  forceRender()
-  handleOnStateChange()
-}*/
+const emit = defineEmits(['onNotification'])
 
-const emit = defineEmits([
-  //'onStateChange',
-  'onNotification'
-])
-
-// const handleOnStateChange = () => {
-//   emit('onStateChange', authStore)
-// }
 const handleOnNotification = (msg: INotification) => {
   emit('onNotification', msg)
 }
-// async function sign(txs: Uint8Array[]): Promise<Uint8Array[]> {
-//   try {
-//     console.log('to sign', authStore.wallet)
-//     if (authStore.wallet == 'arc76') {
-//       return await signWithArc76(txs)
-//     }
-
-//     authStore.count++
-
-//     //handleOnStateChange()
-//     const indexes: number[] = []
-//     for (let index = 0; index < txs.length; index++) {
-//       const decoded = algosdk.decodeUnsignedTransaction(txs[index])
-//       if (decoded.sender.toString() == activeAccount.value?.address.toString()) {
-//         indexes.push(index)
-//       }
-//     }
-//     const ret = await transactionSigner(
-//       txs.map((tx) => algosdk.decodeUnsignedTransaction(tx)),
-//       indexes
-//     )
-//     if (!ret) return []
-//     return ret
-//   } catch (e: any) {
-//     handleOnNotification({ severity: 'error', message: e?.message })
-//     return []
-//   }
-// }
-//const delay = (ms: number) => new Promise((res) => setTimeout(res, ms))
-
 function authArc76CancelSign() {
   authStore.inRegistrationToSign = true
   authStore.inArc76Signature = false
+  authStore.inWalletSignature = false
   authStore.password = ''
 }
 async function signWithArc76() {
@@ -123,9 +67,6 @@ async function signWithArc76() {
     console.log('txs', txs)
     authStore.usignedTxs = txs.map((tx) => algosdk.decodeUnsignedTransaction(tx).toByte())
     console.log('tosign', authStore.usignedTxs)
-    if (!authStore.inArc76Signature) {
-      // on cancel the authStore.inArc76Signature = false, authStore.inRegistrationToSign = true
-    }
 
     const init = `ARC-0076-${authStore.arc76email}-${authStore.password}-0-PBKDF2-999999`
     const salt = `ARC-0076-${authStore.arc76email}-0-PBKDF2-999999`
@@ -171,6 +112,49 @@ function testM() {
   authStore.m = props.useDemoMnemonics
 }
 
+async function authUseWalletAuth() {
+  try {
+    if (!window || !window.crypto || !window.crypto.subtle) {
+      throw Error('Crypto API in browser is not available')
+    }
+    console.log('activeAccount', activeAccount)
+    if (!activeAccount.value || !activeAccount.value?.address) {
+      throw Error('ActiveAccount is empty')
+    }
+
+    const params = await client.getTransactionParams().do()
+    const arc14Tx = arc14(props.arc14Realm, activeAccount.value.address.toString(), params)
+    authStore.inWalletSignature = true
+    const signedList = await transactionSigner([arc14Tx], [0])
+    if (signedList.length == 0) {
+      throw Error('No transactions signed')
+    }
+    const signed = signedList[0]
+    console.log('signed', signed)
+    const header = `SigTx ${Buffer.from(signed).toString('base64')}`
+    const tx = algosdk.decodeSignedTransaction(signed)
+
+    console.log('header', header)
+    authStore.count++
+    authStore.account = tx.txn.sender.toString()
+    authStore.wallet = activeWallet.value?.id ?? 'useWallet'
+    authStore.arc14Header = header
+    authStore.isAuthenticated = true
+    authStore.arc76email = ''
+    authStore.emailIsValid = false
+    authStore.password = ''
+    authStore.password2 = ''
+    authStore.inRegistration = false
+    authStore.inAuthentication = false
+    authStore.inWalletSignature = false
+    console.debug('authStore.wallet', authStore.wallet)
+  } catch (e: any) {
+    handleOnNotification({ severity: 'error', message: e?.message })
+    authStore.inWalletSignature = false
+  }
+  forceRender()
+  //handleOnStateChange()
+}
 async function authArc76Auth() {
   try {
     if (!window || !window.crypto || !window.crypto.subtle) {
@@ -239,7 +223,21 @@ function signInFormError() {
 </script>
 
 <template>
-  <div v-if="authStore.inArc76Signature" class="flex min-h-screen w-full wallets-page">
+  <div v-if="authStore.inWalletSignature" class="flex min-h-screen w-full wallets-page">
+    <div class="items-center justify-center flex p-12 shadow-lg bg-white/50 w-full">
+      <div class="wallet-settings w-1/2">
+        <h3>Please check your wallet and sign the transaction</h3>
+        <button
+          @click="authArc76CancelSign"
+          class="cursor-pointer my-2 mr-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-900"
+          severity="secondary"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+  <div v-else-if="authStore.inArc76Signature" class="flex min-h-screen w-full wallets-page">
     <div class="items-center justify-center flex p-12 shadow-lg bg-white/50 w-full">
       <div class="wallet-settings w-1/2">
         <h3>Sign {{ authStore.usignedTxs.length }} transactions</h3>
@@ -265,7 +263,7 @@ function signInFormError() {
         </button>
         <button
           @click="authArc76CancelSign"
-          class="cursor-pointer my-2 mr-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300"
+          class="cursor-pointer my-2 mr-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-900"
           severity="secondary"
         >
           Cancel
@@ -300,14 +298,14 @@ function signInFormError() {
         <div>
           <button
             @click="testM"
-            class="cursor-pointer my-2 mr-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300"
+            class="cursor-pointer my-2 mr-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-900"
             v-if="props.useDemoMnemonics"
           >
             Demo
           </button>
           <button
             @click="authStore.wallet = 'arc76'"
-            class="cursor-pointer my-2 mr-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300"
+            class="cursor-pointer my-2 mr-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-900"
           >
             Go back
           </button>
@@ -366,7 +364,7 @@ function signInFormError() {
           </button>
           <Button
             @click="authStore.inRegistration = false"
-            class="cursor-pointer my-2 mr-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300"
+            class="cursor-pointer my-2 mr-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-900"
             severity="secondary"
           >
             Back to sign in
@@ -390,14 +388,14 @@ function signInFormError() {
           <div class="w-full flex">
             <button
               @click="authStore.inRegistration = true"
-              class="cursor-pointer my-2 mr-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300"
+              class="cursor-pointer my-2 mr-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-900"
               severity="secondary"
             >
               Register
             </button>
             <button
               @click="authStore.inAuthentication = false"
-              class="cursor-pointer my-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300"
+              class="cursor-pointer my-2 p-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-900"
             >
               Go back
             </button>
@@ -409,10 +407,20 @@ function signInFormError() {
       v-if="!authStore.inRegistration"
       class="w-full md:w-1/2 flex flex-col items-center justify-center p-12 shadow-lg bg-gray-900/80 text-white space-y-6"
     >
-      <div class="wallet-options">
+      <div class="wallet-options w-full lg:w-1/2">
         <h3>Or connect with</h3>
         <div v-if="activeAccount">
-          <button @click="activeWallet?.disconnect()">
+          <button
+            @click="authUseWalletAuth"
+            class="cursor-pointer bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 my-4 mr-4 p-2 px-4 w-full"
+          >
+            Sign authentication message
+          </button>
+          <button
+            v-if="activeWallet"
+            @click="activeWallet.disconnect"
+            class="cursor-pointer py-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-900 my-4 mr-4 p-2 px-4 w-full"
+          >
             Disconnect from {{ activeWallet?.metadata.name }}
           </button>
         </div>
@@ -425,7 +433,7 @@ function signInFormError() {
           :title="wallet.metadata.name"
         >
           <button
-            class="cursor-pointer flex items-center w-64 justify-center border border-gray-300 rounded-md bg-gray-100 hover:bg-gray-100"
+            class="cursor-pointer flex items-center w-full justify-center border border-gray-300 rounded-md bg-gray-100 hover:bg-gray-100"
             v-if="wallet && !wallet.isActive && wallet.isConnected"
             @click="wallet.setActive()"
             :disabled="!wallet.isConnected || wallet.isActive"
@@ -436,7 +444,7 @@ function signInFormError() {
           <button
             v-else
             @click="wallet.connect()"
-            class="relative cursor-pointer flex items-center w-64 border border-gray-300 rounded-md py-2 bg-gray-800/50 hover:bg-gray-700/50 px-4"
+            class="relative cursor-pointer flex items-center w-full border border-gray-300 rounded-md py-2 bg-gray-800/50 hover:bg-gray-700/50 px-4"
           >
             <img
               class="wallet-icon w-10 h-10 m-2"

@@ -262,7 +262,7 @@ function signInFormError() {
             placeholder="Please write your password"
             id="p"
             v-model="authStore.password"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white p-2 cursor-pointer"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white/90 text-gray-700 p-2 cursor-pointer"
             toggleMask
             inputClass="w-full"
             :feedback="false"
@@ -303,7 +303,7 @@ function signInFormError() {
             type="password"
             id="m"
             v-model="authStore.m"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white/90 text-gray-700"
             inputClass="w-full"
             toggleMask
             :feedback="false"
@@ -336,7 +336,7 @@ function signInFormError() {
             id="e"
             type="email"
             v-model="authStore.arc76email"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 bg-white/90"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 bg-white/90 text-gray-700"
             placeholder="Please write your email"
           />
         </div>
@@ -347,7 +347,7 @@ function signInFormError() {
             id="p"
             placeholder="Please write your password"
             v-model="authStore.password"
-            class="cursor-pointer mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 bg-white/90"
+            class="cursor-pointer mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 bg-white/90 text-gray-700"
           />
         </div>
         <div v-if="authStore.inRegistration">
@@ -359,7 +359,7 @@ function signInFormError() {
             id="p2"
             placeholder="Please repeat your password"
             v-model="authStore.password2"
-            class="cursor-pointer mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 bg-white/90"
+            class="cursor-pointer mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 bg-white/90 text-gray-700"
           />
         </div>
         <div v-if="authStore.inRegistration">

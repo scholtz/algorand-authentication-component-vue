@@ -223,6 +223,20 @@ function signInFormError() {
 </script>
 
 <template>
+  <div
+    class="flex flex-col min-h-screen w-full"
+    :style="
+      authStore.inWalletSignature ||
+      authStore.inArc76Signature ||
+      authStore.inAuthentication ||
+      (props.authorizedOnlyAccess && !authStore.isAuthenticated) ||
+      authStore.inRegistration
+        ? 'display: none' // Hide slot content when in signature, authentication or registration. Do not use v-if as it would destroy the content
+        : ''
+    "
+  >
+    <slot></slot>
+  </div>
   <div v-if="authStore.inWalletSignature" class="flex min-h-screen w-full wallets-page">
     <div class="items-center justify-center flex p-12 shadow-lg bg-white/50 w-full">
       <div class="wallet-settings w-1/2">
@@ -463,7 +477,6 @@ function signInFormError() {
       </div>
     </div>
   </div>
-  <slot v-else></slot>
 </template>
 <style>
 .a {
